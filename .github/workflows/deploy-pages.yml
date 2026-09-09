@@ -69,6 +69,28 @@ jobs:
           PY
           test -f _site/assets/page-bgm.mp3
 
+      - name: Add New Oriental share icon
+        if: steps.payload.outputs.ready == 'true'
+        shell: bash
+        run: |
+          curl -L --fail --retry 3 "https://g.xdfimage.cn/upload/6ab4049371e1a99ecbfc1c9c051587a2.png" -o _site/assets/xdf-share-logo.png
+          python3 - <<'PY'
+          from pathlib import Path
+          page=Path('_site/index.html')
+          html=page.read_text(encoding='utf-8')
+          tags='''
+          <link rel="icon" type="image/png" href="assets/xdf-share-logo.png?v=2">
+          <link rel="shortcut icon" href="assets/xdf-share-logo.png?v=2">
+          <link rel="apple-touch-icon" href="assets/xdf-share-logo.png?v=2">
+          <meta property="og:image" content="https://dingchuanyi1811-arch.github.io/fy27-q1-nanjing-review/assets/xdf-share-logo.png?v=2">
+          <meta name="twitter:image" content="https://dingchuanyi1811-arch.github.io/fy27-q1-nanjing-review/assets/xdf-share-logo.png?v=2">
+          '''
+          if 'xdf-share-logo.png' not in html:
+              html=html.replace('</head>',tags+'\n</head>')
+          page.write_text(html,encoding='utf-8')
+          PY
+          test -s _site/assets/xdf-share-logo.png
+
       - name: Setup Pages
         if: steps.payload.outputs.ready == 'true'
         uses: actions/configure-pages@v5
