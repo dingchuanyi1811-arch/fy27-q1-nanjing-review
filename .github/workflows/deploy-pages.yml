@@ -28,19 +28,19 @@ jobs:
         id: payload
         shell: bash
         run: |
-          count=$(find . -maxdepth 1 -type f -name 'site_payload.part*' | wc -l | tr -d ' ')
-          if [[ "$count" -ge 2 ]]; then
+          count=$(find . -maxdepth 1 -type f -name 'fy27_site_chunk_*.part' | wc -l | tr -d ' ')
+          if [[ "$count" -eq 4 ]]; then
             echo "ready=true" >> "$GITHUB_OUTPUT"
           else
             echo "ready=false" >> "$GITHUB_OUTPUT"
-            echo "Waiting for site_payload.part* files"
+            echo "Waiting for all four fy27_site_chunk_*.part files"
           fi
 
       - name: Rebuild static site
         if: steps.payload.outputs.ready == 'true'
         shell: bash
         run: |
-          cat site_payload.part* > site_payload.zip
+          cat fy27_site_chunk_*.part > site_payload.zip
           rm -rf _site
           mkdir -p _site
           unzip -q site_payload.zip -d _site
