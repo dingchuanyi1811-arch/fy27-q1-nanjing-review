@@ -1,0 +1,64 @@
+name: Deploy FY27 Q1 site to GitHub Pages
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Check site payload
+        id: payload
+        shell: bash
+        run: |
+          if [[ -f site_payload.part01 && -f site_payload.part02 ]]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "Waiting for site_payload.part01 and site_payload.part02"
+          fi
+
+      - name: Rebuild static site
+        if: steps.payload.outputs.ready == 'true'
+        shell: bash
+        run: |
+          cat site_payload.part01 site_payload.part02 > site_payload.zip
+          rm -rf _site
+          mkdir -p _site
+          unzip -q site_payload.zip -d _site
+          test -f _site/index.html
+          test -d _site/assets
+
+      - name: Setup Pages
+        if: steps.payload.outputs.ready == 'true'
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - name: Upload Pages artifact
+        if: steps.payload.outputs.ready == 'true'
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+
+      - name: Deploy to GitHub Pages
+        if: steps.payload.outputs.ready == 'true'
+        id: deployment
+        uses: actions/deploy-pages@v4
