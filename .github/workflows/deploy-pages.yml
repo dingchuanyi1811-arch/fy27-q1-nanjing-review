@@ -47,6 +47,28 @@ jobs:
           test -f _site/index.html
           test -d _site/assets
 
+      - name: Improve mobile BGM compatibility
+        if: steps.payload.outputs.ready == 'true'
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import base64, re
+          page=Path('_site/index.html')
+          html=page.read_text(encoding='utf-8')
+          pat=re.compile(r'<source\s+src="data:audio/mpeg;base64,([^"]+)"\s+type="audio/mpeg">')
+          m=pat.search(html)
+          if m:
+              data=base64.b64decode(m.group(1))
+              Path('_site/assets/page-bgm.mp3').write_bytes(data)
+              html=html[:m.start()]+'<source src="assets/page-bgm.mp3" type="audio/mpeg">'+html[m.end():]
+          compat='''<script id="mobile-bgm-compat">(function(){var a=document.getElementById('pageBgm'),w=document.getElementById('bgmPlayer');if(!a)return;a.setAttribute('playsinline','');a.setAttribute('webkit-playsinline','');a.preload='auto';a.loop=true;var ok=false,ev=['touchend','pointerup','click'];function clean(){ev.forEach(function(t){document.removeEventListener(t,u,true)})}function p(){if(ok||!a.paused){ok=true;clean();return}try{var x=a.play();if(x&&x.then)x.then(function(){ok=true;clean()}).catch(function(){})}catch(e){}}function u(e){if(ok)return;if(e&&e.target&&w&&w.contains(e.target))return;p()}ev.forEach(function(t){document.addEventListener(t,u,true)});a.addEventListener('playing',function(){ok=true;clean()},{once:true});document.addEventListener('WeixinJSBridgeReady',p,false);window.addEventListener('pageshow',function(){if(!ok)p()})})();</script>'''
+          if 'id="mobile-bgm-compat"' not in html:
+              html=html.replace('</body>',compat+'\n</body>')
+          page.write_text(html,encoding='utf-8')
+          PY
+          test -f _site/assets/page-bgm.mp3
+
       - name: Setup Pages
         if: steps.payload.outputs.ready == 'true'
         uses: actions/configure-pages@v5
